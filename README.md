@@ -1,11 +1,14 @@
 <div align="center">
 
-<img src="https://i.imgur.com/9vUqXyT.jpeg" alt="TamarAI Logo" width="200"/>
 
-<h1>🧠 TamarAI</h1>
+<img src="https://github.com/user-attachments/assets/c7886d0b-0262-4835-944b-19f3f1ce1d83?raw=true" alt="logoTamar" width="200"/>
 
-**Inteligência Artificial aplicada com propósito.**  
-Soluções inteligentes para automação, análise de dados e integração de sistemas.
+
+
+</div>
+
+## **Inteligência Artificial aplicada com propósito.**  
+ ### Soluções inteligentes para automação, análise de dados e integração de sistemas.
 
 ---
 
