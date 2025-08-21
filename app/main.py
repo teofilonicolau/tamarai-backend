@@ -1,4 +1,5 @@
-# app/main.py (VERSÃO COMPLETA COM DOTENV)
+# app/main.py
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +44,12 @@ class ConsultaRequest(BaseModel):
 class AnaliseRequest(BaseModel):
     texto: str
     tipo_analise: str = "resumo"
+
+class RelatorioRequest(BaseModel):
+    titulo: str
+    conteudo: str
+    area: str = "geral"
+    incluir_jurisprudencia: bool = True
 
 # Rotas básicas
 @app.get("/")
@@ -95,6 +102,22 @@ async def analisar_texto(request: AnaliseRequest):
     
     return {
         "texto_original": request.texto[:100] + "..." if len(request.texto) > 100 else request.texto,
+        **resultado
+    }
+
+@app.post("/api/v1/relatorio")
+async def gerar_relatorio(request: RelatorioRequest):
+    """Gerar relatório jurídico estruturado"""
+    resultado = await ai_service.gerar_relatorio_juridico(
+        request.titulo, 
+        request.conteudo, 
+        request.area,
+        request.incluir_jurisprudencia
+    )
+    
+    return {
+        "titulo": request.titulo,
+        "area": request.area,
         **resultado
     }
 

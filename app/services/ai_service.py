@@ -1,4 +1,5 @@
-# app/services/ai_service.py (VERSÃO SIMPLIFICADA)
+# app/services/ai_service.py (VERSÃO COMPLETA)
+
 from openai import OpenAI
 from typing import Dict, Any
 import os
@@ -34,9 +35,22 @@ class AIService:
                 {pergunta}
                 
                 Inclua:
-                - Base legal
-                - Jurisprudência relevante
+                - Base legal (Lei 8.213/91, EC 103/2019)
+                - Jurisprudência relevante (STJ, STF)
                 - Orientações práticas
+                - Prazos importantes
+                """,
+                "trabalhista": f"""
+                Você é um especialista em Direito do Trabalho brasileiro.
+                Responda de forma técnica e precisa à seguinte pergunta:
+                
+                {pergunta}
+                
+                Inclua:
+                - Base legal (CLT, CF/88)
+                - Jurisprudência relevante (TST)
+                - Direitos do trabalhador
+                - Procedimentos práticos
                 """,
                 "consumidor": f"""
                 Você é um especialista em Direito do Consumidor brasileiro.
@@ -45,9 +59,34 @@ class AIService:
                 {pergunta}
                 
                 Inclua:
-                - Base legal (CDC)
-                - Jurisprudência relevante
+                - Base legal (CDC - Lei 8.078/90)
+                - Jurisprudência relevante (STJ)
                 - Direitos do consumidor
+                - Como proceder
+                """,
+                "civil": f"""
+                Você é um especialista em Direito Civil brasileiro.
+                Responda de forma técnica e precisa à seguinte pergunta:
+                
+                {pergunta}
+                
+                Inclua:
+                - Base legal (Código Civil)
+                - Jurisprudência relevante
+                - Aspectos práticos
+                - Documentação necessária
+                """,
+                "processual_civil": f"""
+                Você é um especialista em Direito Processual Civil brasileiro.
+                Responda de forma técnica e precisa à seguinte pergunta:
+                
+                {pergunta}
+                
+                Inclua:
+                - Base legal (CPC/2015)
+                - Procedimentos
+                - Prazos processuais
+                - Jurisprudência relevante
                 """,
                 "geral": f"""
                 Você é um assistente jurídico especializado em Direito brasileiro.
@@ -137,6 +176,100 @@ class AIService:
                 "caracteres": len(texto),
                 "modelo": self.model,
                 "tokens_usados": 0,
+                "status": "erro"
+            }
+
+    async def gerar_relatorio_juridico(self, titulo: str, conteudo: str, area: str = "geral", incluir_jurisprudencia: bool = True) -> Dict[str, Any]:
+        """Gerar relatório jurídico estruturado"""
+        if not self.client:
+            return {
+                "relatorio": "⚠️ Chave OpenAI não configurada no arquivo .env",
+                "modelo": self.model,
+                "tokens_usados": 0,
+                "status": "erro_configuracao"
+            }
+        
+        try:
+            # Prompt para geração de relatório
+            jurisprudencia_instrucao = "Inclua jurisprudência relevante e precedentes." if incluir_jurisprudencia else "Não inclua jurisprudência."
+            
+            prompts_relatorio = {
+                "previdenciario": f"""
+                Você é um especialista em Direito Previdenciário brasileiro.
+                Gere um relatório jurídico estruturado sobre o seguinte tema:
+                
+                TÍTULO: {titulo}
+                CONTEÚDO: {conteudo}
+                
+                Estruture o relatório com:
+                1. Introdução
+                2. Fundamentação Legal (Lei 8.213/91, EC 103/2019)
+                3. Análise Técnica
+                4. Jurisprudência Relevante (se aplicável)
+                5. Conclusão e Recomendações
+                
+                {jurisprudencia_instrucao}
+                """,
+                "trabalhista": f"""
+                Você é um especialista em Direito do Trabalho brasileiro.
+                Gere um relatório jurídico estruturado sobre o seguinte tema:
+                
+                TÍTULO: {titulo}
+                CONTEÚDO: {conteudo}
+                
+                Estruture o relatório com:
+                1. Introdução
+                2. Fundamentação Legal (CLT, CF/88)
+                3. Análise dos Direitos Trabalhistas
+                4. Jurisprudência do TST (se aplicável)
+                5. Conclusão e Orientações Práticas
+                
+                {jurisprudencia_instrucao}
+                """,
+                "geral": f"""
+                Você é um assistente jurídico especializado em Direito brasileiro.
+                Gere um relatório jurídico estruturado sobre o seguinte tema:
+                
+                TÍTULO: {titulo}
+                CONTEÚDO: {conteudo}
+                
+                Estruture o relatório com:
+                1. Introdução
+                2. Fundamentação Legal
+                3. Análise Jurídica
+                4. Precedentes (se aplicável)
+                5. Conclusão e Recomendações
+                
+                {jurisprudencia_instrucao}
+                """
+            }
+            
+            prompt = prompts_relatorio.get(area, prompts_relatorio["geral"])
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "Você é um especialista em elaboração de relatórios jurídicos estruturados."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.2
+            )
+            
+            return {
+                "relatorio": response.choices[0].message.content,
+                "modelo": self.model,
+                "tokens_usados": response.usage.total_tokens,
+                "incluiu_jurisprudencia": incluir_jurisprudencia,
+                "status": "sucesso"
+            }
+            
+        except Exception as e:
+            return {
+                "relatorio": f"Erro ao gerar relatório: {str(e)}",
+                "modelo": self.model,
+                "tokens_usados": 0,
+                "incluiu_jurisprudencia": incluir_jurisprudencia,
                 "status": "erro"
             }
 
