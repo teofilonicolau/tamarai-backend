@@ -1,21 +1,21 @@
-# app/core/config.py
-from pydantic import BaseSettings
-from typing import Optional
+# app/core/config.py (CORRIGIR IMPORT)
 import os
+from pydantic_settings import BaseSettings  # ← MUDANÇA AQUI
+from typing import Optional
 
 class Settings(BaseSettings):
     # Database (SQLite para desenvolvimento, PostgreSQL para produção)
-    DATABASE_URL: str = "sqlite:///./tamaruse.db"
+    DATABASE_URL: str = "sqlite:///./tamarai.db"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
     
     # OpenAI
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4"
+    OPENAI_MODEL: str = "gpt-3.5-turbo"  # ← MUDEI PARA 3.5 (mais barato)
     
     # Aplicação
-    SECRET_KEY: str = "tamaruse-secret-key-change-in-production"
+    SECRET_KEY: str = "tamarai-secret-key-change-in-production"
     DEBUG: bool = True
     
     # Diretórios
