@@ -1,4 +1,4 @@
-# .gitignore (CRIAR ESTE ARQUIVO)
+# .gitignore (ATUALIZADO)
 
 # Python
 __pycache__/
@@ -58,3 +58,11 @@ uploads/*
 # Static files (generated)
 static/pdfs/*
 !static/pdfs/.gitkeep
+
+# Rust installer (NOVO)
+rustup-init.exe
+*.exe
+
+# Temporary files
+*.tmp
+*.temp

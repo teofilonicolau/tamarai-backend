@@ -1,6 +1,6 @@
-# app/main.py - VERSÃO ATUALIZADA COM BRANDING DINÂMICO
+# app/main.py - VERSÃO SIMPLIFICADA SEM IMPORTS COMPLEXOS
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -12,15 +12,8 @@ from dotenv import load_dotenv
 # Carregar variáveis do .env
 load_dotenv()
 
-# Importar o serviço de IA
+# Importar o serviço de IA (sem imports circulares)
 from app.services.ai_service import ai_service
-
-# Importar routers
-from app.api.routes import consultas, peticoes
-
-# Importar banco de dados
-from app.core.database import engine
-from app.models import Base
 
 app = FastAPI(
     title="TamarAI - Inteligência Artificial Aplicada",
@@ -33,7 +26,7 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,15 +37,10 @@ os.makedirs("static", exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("static/pdfs", exist_ok=True)
 
-# Incluir routers das APIs
-app.include_router(consultas.router, prefix="/api/v1/consultas", tags=["consultas"])
-app.include_router(peticoes.router, prefix="/api/v1/peticoes", tags=["peticoes"])
-
-# Modelos Pydantic ATUALIZADOS com Branding Dinâmico
+# Modelos Pydantic SIMPLIFICADOS
 class ConsultaRequest(BaseModel):
     pergunta: str
     area: str = "geral"
-    # Novos campos opcionais para branding
     firm_name: Optional[str] = None
     lawyer_name: Optional[str] = None
     signature_text: Optional[str] = None
@@ -61,7 +49,6 @@ class ConsultaRequest(BaseModel):
 class AnaliseRequest(BaseModel):
     texto: str
     tipo_analise: str = "resumo"
-    # Novos campos opcionais para branding
     firm_name: Optional[str] = None
     lawyer_name: Optional[str] = None
     signature_text: Optional[str] = None
@@ -72,21 +59,10 @@ class RelatorioRequest(BaseModel):
     conteudo: str
     area: str = "geral"
     incluir_jurisprudencia: bool = True
-    # Novos campos opcionais para branding
     firm_name: Optional[str] = None
     lawyer_name: Optional[str] = None
     signature_text: Optional[str] = None
     ai_persona: Optional[str] = None
-
-# Evento de inicialização
-@app.on_event("startup")
-async def startup_event():
-    """Criar tabelas do banco de dados na inicialização"""
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("✅ Banco de dados inicializado com sucesso!")
-    except Exception as e:
-        print(f"⚠️ Erro ao inicializar banco de dados: {e}")
 
 # Rotas básicas
 @app.get("/")
@@ -101,8 +77,9 @@ async def root():
             "consulta": "/api/v1/consulta",
             "analise": "/api/v1/analise", 
             "parecer_juridico": "/api/v1/parecer-juridico",
-            "peticoes": "/api/v1/peticoes/",
-            "areas_direito": "/api/v1/areas-direito"
+            "areas_direito": "/api/v1/areas-direito",
+            "status": "/api/v1/status",
+            "debug": "/debug/env"
         }
     }
 
@@ -124,7 +101,8 @@ async def debug_env():
     return {
         "openai_key_exists": bool(os.getenv("OPENAI_API_KEY")),
         "openai_key_length": len(os.getenv("OPENAI_API_KEY", "")),
-        "openai_model": os.getenv("OPENAI_MODEL", "não encontrado")
+        "openai_model": os.getenv("OPENAI_MODEL", "não encontrado"),
+        "database_url": os.getenv("DATABASE_URL", "não encontrado")
     }
 
 @app.get("/api/v1/status")
@@ -142,7 +120,6 @@ async def api_status():
             "/api/v1/consulta",
             "/api/v1/analise",
             "/api/v1/parecer-juridico",
-            "/api/v1/peticoes/",
             "/api/v1/areas-direito"
         ]
     }
@@ -180,10 +157,10 @@ async def listar_areas_direito():
     return {
         "areas": areas,
         "total_areas": len(areas),
-        "service": "TamarAI - Serviço Jurídico com IA"  # ← NEUTRO
+        "service": "TamarAI - Serviço Jurídico com IA"
     }
 
-# ROTAS DE IA ATUALIZADAS
+# ROTAS DE IA
 @app.post("/api/v1/consulta")
 async def fazer_consulta(request: ConsultaRequest):
     """Consulta jurídica com IA real"""
@@ -199,7 +176,7 @@ async def fazer_consulta(request: ConsultaRequest):
     return {
         "pergunta": request.pergunta,
         "area": request.area,
-        "escritorio": request.firm_name or "Serviço Jurídico AI",  # ← DINÂMICO
+        "escritorio": request.firm_name or "Serviço Jurídico AI",
         **resultado
     }
 
@@ -217,13 +194,13 @@ async def analisar_texto(request: AnaliseRequest):
     
     return {
         "texto_original": request.texto[:100] + "..." if len(request.texto) > 100 else request.texto,
-        "escritorio": request.firm_name or "Serviço Jurídico AI",  # ← DINÂMICO
+        "escritorio": request.firm_name or "Serviço Jurídico AI",
         **resultado
     }
 
 @app.post("/api/v1/parecer-juridico")
 async def gerar_parecer_juridico(request: RelatorioRequest):
-    """Gerar parecer jurídico estruturado (ENDPOINT RENOMEADO)"""
+    """Gerar parecer jurídico estruturado"""
     resultado = await ai_service.gerar_relatorio_juridico(
         request.titulo, 
         request.conteudo, 
@@ -239,7 +216,7 @@ async def gerar_parecer_juridico(request: RelatorioRequest):
         "titulo": request.titulo,
         "area": request.area,
         "tipo": "parecer_juridico",
-        "escritorio": request.firm_name or "Serviço Jurídico AI",  # ← DINÂMICO
+        "escritorio": request.firm_name or "Serviço Jurídico AI",
         **resultado
     }
 
