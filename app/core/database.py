@@ -1,15 +1,22 @@
-# app/core/database.py
+# app/core/database.py - VERSÃO CORRIGIDA
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
+import os
+from dotenv import load_dotenv
+
+# Carregar .env
+load_dotenv()
+
+# Usar diretamente do .env para evitar imports circulares
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tamaruse.db")
 
 # Engine do banco
 engine = create_engine(
-    settings.DATABASE_URL,
+    DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=300,
-    echo=settings.DEBUG
+    echo=True  # Para debug
 )
 
 # Session
