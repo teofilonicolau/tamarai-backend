@@ -1,2 +1,9 @@
-# app/modules/processual_civil/__init__.py
-# Arquivo vazio para tornar 'processual_civil' um pacote Python
+# app/modules/processual_civil/__init__.py - CRIAR
+from .schemas import DadosProcessualCivil, PeticaoProcessualCivil
+from .service import ProcessualCivilService
+
+__all__ = [
+    "DadosProcessualCivil",
+    "PeticaoProcessualCivil",
+    "ProcessualCivilService"
+]

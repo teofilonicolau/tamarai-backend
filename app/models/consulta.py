@@ -1,4 +1,5 @@
 # app/models/consulta.py
+
 from sqlalchemy import Column, Integer, String, Text, DateTime, Enum, JSON
 from sqlalchemy.sql import func
 from app.models.base import Base
@@ -8,6 +9,7 @@ class AreaJuridica(str, enum.Enum):
     PREVIDENCIARIO = "previdenciario"
     CONSUMIDOR = "consumidor"
     PROCESSUAL_CIVIL = "processual_civil"
+    TRABALHISTA = "trabalhista"
 
 class Consulta(Base):
     __tablename__ = "consultas"

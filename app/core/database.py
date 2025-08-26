@@ -1,31 +1,20 @@
-# app/core/database.py - VERSÃO CORRIGIDA
+# app/core/database.py - VERSÃO POSTGRESQL
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
-from dotenv import load_dotenv
+from app.core.config import settings
 
-# Carregar .env
-load_dotenv()
-
-# Usar diretamente do .env para evitar imports circulares
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tamaruse.db")
-
-# Engine do banco
+# Usar PostgreSQL do settings
 engine = create_engine(
-    DATABASE_URL,
+    settings.database_url,
     pool_pre_ping=True,
     pool_recycle=300,
-    echo=True  # Para debug
+    echo=settings.debug
 )
 
-# Session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Base para modelos
 Base = declarative_base()
 
-# Dependency para obter sessão do banco
 def get_db():
     db = SessionLocal()
     try:

@@ -61,6 +61,22 @@ class AIService:
                 
                 Assine como: {_signature_text}
                 """,
+                "trabalhista": f"""
+                {_ai_persona}
+                Você atua como {_lawyer_name}, especialista em Direito Trabalhista brasileiro.
+                Responda de forma técnica e precisa à seguinte pergunta:
+                
+                {pergunta}
+                
+                Inclua:
+                - Base legal (CLT, Constituição Federal, Normas Regulamentadoras)
+                - Jurisprudência relevante (TST, STF)
+                - Orientações práticas para o cliente
+                - Prazos processuais relevantes
+                - Documentação necessária
+                
+                Assine como: {_signature_text}
+                """,
                 "geral": f"""
                 {_ai_persona}
                 Você é um assistente jurídico geral do escritório {_firm_name}, especializado em Direito brasileiro.
@@ -249,6 +265,106 @@ class AIService:
                 "modelo": self.model,
                 "tokens_usados": 0,
                 "incluiu_jurisprudencia": incluir_jurisprudencia,
+                "status": "erro"
+            }
+    
+    async def gerar_peticao_especializada(self, prompt: str, area: str, firm_name: Optional[str] = None, lawyer_name: Optional[str] = None, signature_text: Optional[str] = None, ai_persona: Optional[str] = None) -> Dict[str, Any]:
+        """Método específico para petições especializadas"""
+        if not self.client:
+            return {
+                "peticao": "⚠️ Chave OpenAI não configurada no arquivo .env",
+                "modelo": self.model,
+                "tokens_usados": 0,
+                "status": "erro_configuracao"
+            }
+        
+        # Definir padrões para branding se não forem fornecidos
+        _firm_name = firm_name if firm_name else "Serviço Jurídico de IA"
+        _lawyer_name = lawyer_name if lawyer_name else "um especialista em Direito"
+        _signature_text = signature_text if signature_text else f"Atenciosamente, {_lawyer_name} do {_firm_name}"
+        _ai_persona = ai_persona if ai_persona else f"Você é um especialista em {area} com vasta experiência em redação jurídica do escritório {_firm_name}."
+        
+        try:
+            # Prompt especializado por área
+            prompts = {
+                "trabalhista": f"""
+                {_ai_persona}
+                Você atua como {_lawyer_name}, especialista em Direito Trabalhista brasileiro.
+                Redija uma petição jurídica completa e formal com base no seguinte pedido:
+                
+                {prompt}
+                
+                Inclua:
+                - Cabeçalho completo (endereçamento ao juízo, qualificação das partes)
+                - Fundamentação legal (CLT, Constituição Federal, Normas Regulamentadoras)
+                - Jurisprudência relevante (TST, STF)
+                - Pedidos claros e específicos
+                - Documentação necessária
+                - Assinatura formal
+                
+                Assine como: {_signature_text}
+                """,
+                "previdenciario": f"""
+                {_ai_persona}
+                Você atua como {_lawyer_name}, especialista em Direito Previdenciário brasileiro.
+                Redija uma petição jurídica completa e formal com base no seguinte pedido:
+                
+                {prompt}
+                
+                Inclua:
+                - Cabeçalho completo (endereçamento ao juízo, qualificação das partes)
+                - Fundamentação legal (Lei 8.213/91, EC 103/2019, Decreto 3.048/99)
+                - Jurisprudência relevante (STJ, STF, TNU)
+                - Pedidos claros e específicos
+                - Documentação necessária
+                - Assinatura formal
+                
+                Assine como: {_signature_text}
+                """,
+                "geral": f"""
+                {_ai_persona}
+                Você é um assistente jurídico geral do escritório {_firm_name}.
+                Redija uma petição jurídica completa e formal com base no seguinte pedido:
+                
+                {prompt}
+                
+                Inclua:
+                - Cabeçalho completo (endereçamento ao juízo, qualificação das partes)
+                - Fundamentação legal relevante ao caso
+                - Jurisprudência aplicável
+                - Pedidos claros e específicos
+                - Documentação necessária
+                - Assinatura formal
+                
+                Assine como: {_signature_text}
+                """
+            }
+            
+            peticao_prompt = prompts.get(area, prompts["geral"])
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": _ai_persona},
+                    {"role": "user", "content": peticao_prompt}
+                ],
+                max_tokens=2000,
+                temperature=0.2
+            )
+            
+            return {
+                "peticao": response.choices[0].message.content,
+                "modelo": self.model,
+                "tokens_usados": response.usage.total_tokens,
+                "area": area,
+                "status": "sucesso"
+            }
+            
+        except Exception as e:
+            return {
+                "peticao": f"Erro ao gerar petição: {str(e)}",
+                "modelo": self.model,
+                "tokens_usados": 0,
                 "status": "erro"
             }
 

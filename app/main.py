@@ -15,6 +15,10 @@ load_dotenv()
 # Importar o serviço de IA (sem imports circulares)
 from app.services.ai_service import ai_service
 
+# Importar todos os routers
+from app.api.routes import trabalhista, consumidor, previdenciario, civil, processual_civil
+from app.middleware.ethics_middleware import EthicsMiddleware
+
 app = FastAPI(
     title="TamarAI - Inteligência Artificial Aplicada",
     description="Soluções inteligentes para automação, análise de dados e integração de sistemas",
@@ -22,6 +26,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Adicionar middleware ético
+app.add_middleware(EthicsMiddleware)
 
 # CORS
 app.add_middleware(
@@ -120,7 +127,12 @@ async def api_status():
             "/api/v1/consulta",
             "/api/v1/analise",
             "/api/v1/parecer-juridico",
-            "/api/v1/areas-direito"
+            "/api/v1/areas-direito",
+            "/api/v1/trabalhista",
+            "/api/v1/consumidor",
+            "/api/v1/previdenciario",
+            "/api/v1/civil",
+            "/api/v1/processual-civil"
         ]
     }
 
@@ -219,6 +231,33 @@ async def gerar_parecer_juridico(request: RelatorioRequest):
         "escritorio": request.firm_name or "Serviço Jurídico AI",
         **resultado
     }
+
+# Incluir todos os routers
+app.include_router(
+    trabalhista.router,
+    prefix="/api/v1/trabalhista",
+    tags=["trabalhista"]
+)
+app.include_router(
+    consumidor.router,
+    prefix="/api/v1/consumidor",
+    tags=["consumidor"]
+)
+app.include_router(
+    previdenciario.router,
+    prefix="/api/v1/previdenciario",
+    tags=["previdenciario"]
+)
+app.include_router(
+    civil.router,
+    prefix="/api/v1/civil",
+    tags=["civil"]
+)
+app.include_router(
+    processual_civil.router,
+    prefix="/api/v1/processual-civil",
+    tags=["processual-civil"]
+)
 
 # Servir arquivos estáticos
 try:
