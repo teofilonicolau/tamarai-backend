@@ -1,5 +1,6 @@
+
 # app/api/routes/previdenciario.py - VERSÃO COMPLETA
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from app.modules.previdenciario.schemas import DadosPrevidenciarios, PeticaoPrevidenciaria
 from app.modules.previdenciario.service import PrevidenciarioService
 from app.core.ethics import EthicsService
@@ -163,33 +164,57 @@ async def gerar_peticao_revisao_beneficio(dados: DadosPrevidenciarios):
 async def gerar_peticao_com_calculo(
     tipo_peticao: str,
     dados: DadosPrevidenciarios,
-    incluir_calculo: bool = True
+    incluir_calculo: bool = Query(False)
 ):
     """Gera petição com integração à calculadora previdenciária"""
     try:
-        # Mapear tipo de petição para método correspondente
-        metodos_peticao = {
-            "aposentadoria-tempo-contribuicao": previdenciario_service.gerar_peticao_aposentadoria_tempo_contribuicao,
-            "auxilio-doenca": previdenciario_service.gerar_peticao_auxilio_doenca,
-            "pensao-morte": previdenciario_service.gerar_peticao_pensao_morte,
-            "aposentadoria-especial": previdenciario_service.gerar_peticao_aposentadoria_especial,
-            "bpc-loas": previdenciario_service.gerar_peticao_bpc_loas,
-            "aposentadoria-rural": previdenciario_service.gerar_peticao_aposentadoria_rural,
-            "salario-maternidade": previdenciario_service.gerar_peticao_salario_maternidade,
-            "revisao-beneficio": previdenciario_service.gerar_peticao_revisao_beneficio,
-            "aposentadoria-invalidez": previdenciario_service.gerar_peticao_aposentadoria_invalidez,
-            "revisao-vida-toda": previdenciario_service.gerar_peticao_revisao_vida_toda
+        # ADICIONAR MAPEAMENTO CORRETO:
+        mapeamento_tipos = {
+            "aposentadoria-por-tempo": "aposentadoria_tempo_contribuicao",
+            "aposentadoria-invalidez": "aposentadoria_invalidez",
+            "auxilio-doenca": "auxilio_doenca",
+            "pensao-morte": "pensao_morte",
+            "aposentadoria-especial": "aposentadoria_especial",
+            "bpc-loas": "bpc_loas",
+            "aposentadoria-rural": "aposentadoria_rural",
+            "salario-maternidade": "salario_maternidade",
+            "revisao-vida-toda": "revisao_vida_toda",
+            "revisao-beneficio": "revisao_beneficio"
         }
         
-        if tipo_peticao not in metodos_peticao:
-            raise HTTPException(status_code=400, detail=f"Tipo de petição '{tipo_peticao}' não encontrado")
+        # VERIFICAR SE TIPO EXISTE:
+        if tipo_peticao not in mapeamento_tipos:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Tipo de petição '{tipo_peticao}' não encontrado"
+            )
+        
+        # CHAMAR MÉTODO CORRETO:
+        tipo_interno = mapeamento_tipos[tipo_peticao]
+        
+        # Mapear tipo interno para método correspondente
+        metodos_peticao = {
+            "aposentadoria_tempo_contribuicao": previdenciario_service.gerar_peticao_aposentadoria_tempo_contribuicao,
+            "aposentadoria_invalidez": previdenciario_service.gerar_peticao_aposentadoria_invalidez,
+            "auxilio_doenca": previdenciario_service.gerar_peticao_auxilio_doenca,
+            "pensao_morte": previdenciario_service.gerar_peticao_pensao_morte,
+            "aposentadoria_especial": previdenciario_service.gerar_peticao_aposentadoria_especial,
+            "bpc_loas": previdenciario_service.gerar_peticao_bpc_loas,
+            "aposentadoria_rural": previdenciario_service.gerar_peticao_aposentadoria_rural,
+            "salario_maternidade": previdenciario_service.gerar_peticao_salario_maternidade,
+            "revisao_vida_toda": previdenciario_service.gerar_peticao_revisao_vida_toda,
+            "revisao_beneficio": previdenciario_service.gerar_peticao_revisao_beneficio
+        }
+        
+        if tipo_interno not in metodos_peticao:
+            raise HTTPException(status_code=400, detail=f"Método para '{tipo_interno}' não implementado")
         
         # 1. Gerar petição normal
-        peticao = await metodos_peticao[tipo_peticao](dados)
+        peticao = await metodos_peticao[tipo_interno](dados)
         
         # 2. Preparar resposta base
         response = {
-            "tipo": f"peticao_{tipo_peticao.replace('-', '_')}_premium",
+            "tipo": f"peticao_{tipo_interno}_premium",
             "area": "previdenciario",
             "texto_peticao": peticao,
             "dados_utilizados": dados.dict(),
@@ -200,7 +225,7 @@ async def gerar_peticao_com_calculo(
         
         # 3. Se incluir cálculo, integrar com calculadora
         if incluir_calculo:
-            # TODO: Integrar com sua calculadora quando estiver deployada
+            # TODO: Integrar com calculadora especializada quando estiver deployada
             response["valor_calculado"] = {
                 "rmi_estimada": "R$ 2.850,00",
                 "valor_atrasado": "R$ 15.200,00",

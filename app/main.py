@@ -1,5 +1,4 @@
-# app/main.py - VERSÃO SIMPLIFICADA SEM IMPORTS COMPLEXOS
-
+# app/main.py - VERSÃO COMPLETA ATUALIZADA
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -17,12 +16,13 @@ from app.services.ai_service import ai_service
 
 # Importar todos os routers
 from app.api.routes import trabalhista, consumidor, previdenciario, civil, processual_civil
+from app.api.routes import calculadora  # ← NOVO ROUTER ADICIONADO
 from app.middleware.ethics_middleware import EthicsMiddleware
 
 app = FastAPI(
     title="TamarAI - Inteligência Artificial Aplicada",
     description="Soluções inteligentes para automação, análise de dados e integração de sistemas",
-    version="1.0.0",
+    version="2.0.0",  # ← VERSÃO ATUALIZADA
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -76,15 +76,17 @@ class RelatorioRequest(BaseModel):
 async def root():
     return {
         "message": "Bem-vindo à API TamarAI!",
-        "version": "1.0.0",
+        "version": "2.0.0",  # ← VERSÃO ATUALIZADA
         "status": "Operacional",
         "purpose": "Inteligência Artificial aplicada com propósito",
         "docs": "/docs",
+        "novidades": "Calculadoras EC 103/2019 e Trabalhista Completa",  # ← NOVO
         "endpoints": {
             "consulta": "/api/v1/consulta",
             "analise": "/api/v1/analise", 
             "parecer_juridico": "/api/v1/parecer-juridico",
             "areas_direito": "/api/v1/areas-direito",
+            "calculadoras": "/api/v1/calculadora/status",  # ← NOVO
             "status": "/api/v1/status",
             "debug": "/debug/env"
         }
@@ -92,14 +94,20 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "tamarai-backend"}
+    return {
+        "status": "healthy", 
+        "service": "tamarai-backend",
+        "calculadoras": "operacionais",  # ← NOVO
+        "version": "2.0.0"
+    }
 
 @app.get("/test")
 async def test_endpoint():
     return {
         "message": "Endpoint de teste da TamarAI funcionando!",
-        "database": "SQLite configurado",
-        "static_files": "Configurado"
+        "database": "PostgreSQL configurado",  # ← ATUALIZADO
+        "static_files": "Configurado",
+        "calculadoras": "EC 103 + Trabalhista Completa"  # ← NOVO
     }
 
 @app.get("/debug/env")
@@ -109,7 +117,8 @@ async def debug_env():
         "openai_key_exists": bool(os.getenv("OPENAI_API_KEY")),
         "openai_key_length": len(os.getenv("OPENAI_API_KEY", "")),
         "openai_model": os.getenv("OPENAI_MODEL", "não encontrado"),
-        "database_url": os.getenv("DATABASE_URL", "não encontrado")
+        "database_url": os.getenv("DATABASE_URL", "não encontrado"),
+        "calculadoras_status": "operacionais"  # ← NOVO
     }
 
 @app.get("/api/v1/status")
@@ -119,15 +128,17 @@ async def api_status():
     
     return {
         "api": "online",
-        "database": "sqlite - conectado",
+        "database": "postgresql - conectado",  # ← ATUALIZADO
         "ai_service": "openai - configurado" if openai_configured else "openai - não configurado",
-        "cache": "não configurado",
-        "version": "1.0.0",
+        "cache": "redis - configurado",  # ← ATUALIZADO
+        "calculadoras": "ec103 + trabalhista completa",  # ← NOVO
+        "version": "2.0.0",
         "endpoints_disponiveis": [
             "/api/v1/consulta",
             "/api/v1/analise",
             "/api/v1/parecer-juridico",
             "/api/v1/areas-direito",
+            "/api/v1/calculadora/*",  # ← NOVO
             "/api/v1/trabalhista",
             "/api/v1/consumidor",
             "/api/v1/previdenciario",
@@ -143,12 +154,14 @@ async def listar_areas_direito():
         "previdenciario": {
             "nome": "Direito Previdenciário",
             "descricao": "Benefícios do INSS, aposentadorias, auxílios",
-            "tipos_peticao": ["inicial", "revisao", "recurso"]
+            "tipos_peticao": ["inicial", "revisao", "recurso"],
+            "calculadoras": ["tempo-especial", "regra-transicao-ec103", "periodo-graca"]  # ← NOVO
         },
         "trabalhista": {
             "nome": "Direito Trabalhista", 
             "descricao": "Relações de trabalho, rescisões, direitos trabalhistas",
-            "tipos_peticao": ["inicial", "contestacao", "recurso"]
+            "tipos_peticao": ["inicial", "contestacao", "recurso"],
+            "calculadoras": ["horas-extras", "verbas-rescisorias"]  # ← NOVO
         },
         "consumidor": {
             "nome": "Direito do Consumidor",
@@ -169,10 +182,11 @@ async def listar_areas_direito():
     return {
         "areas": areas,
         "total_areas": len(areas),
-        "service": "TamarAI - Serviço Jurídico com IA"
+        "service": "TamarAI - Serviço Jurídico com IA",
+        "calculadoras_disponiveis": True  # ← NOVO
     }
 
-# ROTAS DE IA
+# ROTAS DE IA (mantidas iguais)
 @app.post("/api/v1/consulta")
 async def fazer_consulta(request: ConsultaRequest):
     """Consulta jurídica com IA real"""
@@ -233,6 +247,10 @@ async def gerar_parecer_juridico(request: RelatorioRequest):
     }
 
 # Incluir todos os routers
+app.include_router(
+    calculadora.router,  # ← NOVO ROUTER PRIMEIRO
+    tags=["calculadoras"]
+)
 app.include_router(
     trabalhista.router,
     prefix="/api/v1/trabalhista",

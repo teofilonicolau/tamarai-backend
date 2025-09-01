@@ -1,26 +1,62 @@
-# app/modules/previdenciario/schemas.py - NOVO
-from pydantic import BaseModel, Field
-from datetime import date
+# app/modules/previdenciario/schemas.py - VERSÃO COMPLETA
+from pydantic import BaseModel, validator
 from typing import Optional, List
 
 class DadosPrevidenciarios(BaseModel):
-    tipo_beneficio: str = Field(..., description="aposentadoria_invalidez, tempo_contribuicao, revisao_vida_toda, etc.")
+    # Campos do benefício
+    tipo_beneficio: str
     numero_beneficio: Optional[str] = None
-    der: date  # Data de Entrada do Requerimento
-    dib: Optional[date] = None  # Data de Início do Benefício
+    der: Optional[str] = None
+    dib: Optional[str] = None
     numero_processo_administrativo: Optional[str] = None
-    motivo_recusa: str
-    tempo_contribuicao_total: Optional[int] = None  # em meses
+    motivo_recusa: Optional[str] = None
+    
+    # Dados pessoais
+    nome: Optional[str] = None
+    cpf: Optional[str] = None
+    rg: Optional[str] = None
+    orgao_emissor: Optional[str] = None
+    endereco_completo: Optional[str] = None
+    telefone: Optional[str] = None
+    data_nascimento: Optional[str] = None  # Para cálculo de idade/prioridade
+    
+    # Dados contributivos
+    tempo_contribuicao_total: Optional[int] = None
     historico_laboral: Optional[str] = None
     historico_contribuicoes: Optional[str] = None
+    
+    # Dados médicos
     informacoes_medicas: Optional[str] = None
     laudos_medicos: Optional[List[str]] = []
     cid_principal: Optional[str] = None
-    atividade_especial: bool = False
+    
+    # Atividade especial
+    atividade_especial: Optional[bool] = False
     exposicao_agentes_nocivos: Optional[str] = None
+    
+    # Valor da causa
+    valor_causa: Optional[float] = None
+    
+    # Campos adicionais
+    justica_gratuita: bool = True  # Padrão True para previdenciário
+    tutela_antecipada: bool = True  # Padrão True para urgência
+    especialidade_perito: Optional[str] = None  # "ortopedista", "neurologista", etc.
+    
+    # Validações
+    @validator('cpf')
+    def validar_cpf(cls, v):
+        if v and len(v.replace('.', '').replace('-', '')) != 11:
+            raise ValueError('CPF deve ter 11 dígitos')
+        return v
+    
+    @validator('valor_causa')
+    def validar_valor_causa(cls, v):
+        if v and v <= 0:
+            raise ValueError('Valor da causa deve ser positivo')
+        return v
 
 class PeticaoPrevidenciaria(BaseModel):
-    dados_previdenciarios: DadosPrevidenciarios
-    pedidos_principais: List[str]
-    valor_causa: float
-    tutela_urgencia: bool = False
+    tipo: str
+    area: str
+    texto_peticao: str
+    dados_utilizados: DadosPrevidenciarios
