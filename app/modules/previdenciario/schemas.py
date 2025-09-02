@@ -42,6 +42,11 @@ class DadosPrevidenciarios(BaseModel):
     tutela_antecipada: bool = True  # Padrão True para urgência
     especialidade_perito: Optional[str] = None  # "ortopedista", "neurologista", etc.
     
+    # NOVO CAMPO PARA COMARCA
+    comarca: Optional[str] = None
+    cidade_comarca: Optional[str] = None
+    estado_comarca: Optional[str] = None
+    
     # Validações
     @validator('cpf')
     def validar_cpf(cls, v):

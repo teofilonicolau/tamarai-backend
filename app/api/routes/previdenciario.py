@@ -1,9 +1,13 @@
 
 # app/api/routes/previdenciario.py - VERSÃO COMPLETA
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from app.modules.previdenciario.schemas import DadosPrevidenciarios, PeticaoPrevidenciaria
 from app.modules.previdenciario.service import PrevidenciarioService
 from app.core.ethics import EthicsService
+from app.services.pdf_service import PDFService
+import io
+from datetime import date
 
 router = APIRouter()
 previdenciario_service = PrevidenciarioService()
@@ -237,3 +241,67 @@ async def gerar_peticao_com_calculo(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== ENDPOINT PDF ====================
+@router.post("/peticao-pdf/{tipo_peticao}")
+async def gerar_pdf_peticao(
+    tipo_peticao: str,
+    dados: DadosPrevidenciarios
+):
+    """
+    Gera PDF da petição aprovada para download
+    """
+    
+    # Mapear tipo de petição para função
+    funcoes_peticao = {
+        "aposentadoria-especial": previdenciario_service.gerar_peticao_aposentadoria_especial,
+        "aposentadoria-invalidez": previdenciario_service.gerar_peticao_aposentadoria_invalidez,
+        "auxilio-doenca": previdenciario_service.gerar_peticao_auxilio_doenca,
+        "pensao-morte": previdenciario_service.gerar_peticao_pensao_morte,
+        "bpc-loas": previdenciario_service.gerar_peticao_bpc_loas,
+        "aposentadoria-rural": previdenciario_service.gerar_peticao_aposentadoria_rural,
+        "salario-maternidade": previdenciario_service.gerar_peticao_salario_maternidade,
+        "revisao-vida-toda": previdenciario_service.gerar_peticao_revisao_vida_toda,
+        "aposentadoria-tempo-contribuicao": previdenciario_service.gerar_peticao_aposentadoria_tempo_contribuicao,
+        "revisao-beneficio": previdenciario_service.gerar_peticao_revisao_beneficio
+    }
+    
+    if tipo_peticao not in funcoes_peticao:
+        raise HTTPException(status_code=400, detail="Tipo de petição inválido")
+    
+    # Gerar petição
+    funcao_peticao = funcoes_peticao[tipo_peticao]
+    resultado = await funcao_peticao(dados)
+    
+    # Extrair texto da petição
+    texto_peticao = resultado  # Já é string direta do service
+    
+    # Gerar PDF
+    pdf_service = PDFService()
+    
+    # Nome do arquivo
+    nome_cliente = dados.nome.replace(" ", "_") if dados.nome else "cliente"
+    nome_arquivo = f"peticao_{tipo_peticao}_{nome_cliente}_{date.today().strftime('%Y%m%d')}.pdf"
+    nome_arquivo = nome_arquivo.lower()
+    
+    # Gerar PDF usando o serviço existente
+    pdf_path = await pdf_service.gerar_peticao_pdf(
+        dados_peticao=dados.dict(),
+        texto_peticao=texto_peticao,
+        nome_arquivo=nome_arquivo
+    )
+    
+    # Ler arquivo PDF
+    with open(pdf_path, "rb") as pdf_file:
+        pdf_content = pdf_file.read()
+    
+    # Retornar PDF para download
+    headers = {
+        'Content-Disposition': f'attachment; filename="{nome_arquivo}"'
+    }
+    
+    return StreamingResponse(
+        io.BytesIO(pdf_content),
+        media_type="application/pdf",
+        headers=headers
+    )

@@ -1,6 +1,5 @@
 # app/modules/previdenciario/service.py - VERSÃO CORRIGIDA COMPLETA
 
-import re
 from typing import List
 from datetime import date
 from .schemas import DadosPrevidenciarios
@@ -105,76 +104,47 @@ class PrevidenciarioService:
         - Fundamente todos os pedidos com base legal e jurisprudencial sólida
         """
     
-    def _formatar_cpf(self, cpf) -> str:
+    def _formatar_cpf(self, cpf: str) -> str:
         """Formata CPF com pontos e hífen"""
-        try:
-            if cpf is None:
-                return "CPF A INFORMAR"
-            
-            cpf_str = str(cpf).replace(".", "").replace("-", "").replace(" ", "")
-            
-            if len(cpf_str) >= 11:
-                cpf_str = cpf_str.zfill(11)
-                return f"{cpf_str[:3]}.{cpf_str[3:6]}.{cpf_str[6:9]}-{cpf_str[9:]}"
-            else:
-                return "CPF A INFORMAR"
-                
-        except (ValueError, TypeError):
-            return "CPF A INFORMAR"
+        if cpf and len(cpf) == 11:
+            return f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}"
+        return cpf or "CPF A INFORMAR"
     
-    def _formatar_valor_monetario(self, valor) -> str:
-        """Formata valor monetário em reais - PADRÃO BRASILEIRO"""
-        try:
-            if valor is None:
-                return "VALOR A CALCULAR"
-            
-            valor_float = float(valor)
-            
-            if valor_float > 0:
-                return f"R\$ {valor_float:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            else:
-                return "VALOR A CALCULAR"
-                
-        except (ValueError, TypeError):
-            return "VALOR A CALCULAR"
+    def _formatar_valor_monetario(self, valor: float) -> str:
+        """Formata valor monetário em reais"""
+        if valor:
+            return f"R\$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return "VALOR A CALCULAR"
     
-    def _extrair_cidade_estado_corrigido(self, endereco: str, orgao_emissor: str, dados: DadosPrevidenciarios) -> tuple:
-        """Extrai cidade e estado CORRIGIDO - PRIORIZA CAMPOS MANUAIS"""
-        
-        # PRIORIDADE 1: Campos manuais do formulário (PaaS)
-        if hasattr(dados, 'cidade_comarca') and dados.cidade_comarca:
-            cidade = dados.cidade_comarca
-            estado = dados.estado_comarca or "SP"  # Padrão SP
-            return cidade, estado
-        
-        # PRIORIDADE 2: Extração automática do endereço (fallback)
-        cidade = "São Paulo"  # Padrão melhorado
-        estado = "SP"  # Padrão melhorado
-
+    def _extrair_cidade_estado_corrigido(self, endereco: str, orgao_emissor: str) -> tuple:
+        """Extrai cidade e estado CORRIGIDO"""
+        cidade = "Icó" # Padrão
+        estado = "CE" # Padrão
+    
         if endereco:
-            # Buscar padrão "Cidade/Estado" no final
-            if "/" in endereco:
-                partes = endereco.split("/")
+            # Buscar padrão "Cidade - Estado"
+            if " - " in endereco:
+                partes = endereco.split(" - ")
                 if len(partes) >= 2:
-                    estado_parte = partes[-1].strip()
                     cidade_parte = partes[-2].strip()
+                    estado_parte = partes[-1].strip()
                     
-                    # Extrair estado (últimas 2 letras)
-                    if len(estado_parte) >= 2:
-                        estado = estado_parte[-2:].upper()
-                    
-                    # Extrair cidade (após última vírgula)
+                    # Extrair cidade (última palavra antes do hífen)
                     if "," in cidade_parte:
                         cidade = cidade_parte.split(",")[-1].strip()
                     else:
                         cidade = cidade_parte
-
-        # PRIORIDADE 3: Verificar órgão emissor como fallback
+                    
+                    # Extrair estado (primeiras 2 letras)
+                    if len(estado_parte) >= 2:
+                        estado = estado_parte[:2].upper()
+    
+        # Verificar órgão emissor como fallback
         if orgao_emissor and "/" in orgao_emissor:
             estado_orgao = orgao_emissor.split("/")[-1].strip()
             if len(estado_orgao) == 2:
                 estado = estado_orgao.upper()
-
+    
         return cidade, estado
 
     def _inserir_tutela_antecipada(self, template: str, tipo_beneficio: str) -> str:
@@ -200,8 +170,7 @@ class PrevidenciarioService:
         """Gera assinatura única sem duplicação"""
         cidade, estado = self._extrair_cidade_estado_corrigido(
             getattr(dados, 'endereco_completo', ''),
-            getattr(dados, 'orgao_emissor', ''),
-            dados  # ← ADICIONAR ESTE PARÂMETRO
+            getattr(dados, 'orgao_emissor', '')
         )
         
         data_hoje = date.today()
@@ -221,28 +190,8 @@ OAB/{estado} [NÚMERO]
 Advogado do Requerente
 """
 
-    def _remover_assinatura_ia(self, template: str) -> str:
-        """Remove assinatura gerada pela IA para evitar duplicação"""
-        
-        # Padrões mais robustos
-        padroes_remover = [
-            r"Atenciosamente,\s*\n\s*Dr\.\s*\[NOME DO ADVOGADO\]",
-            r"Dr\.\s*\[NOME DO ADVOGADO\]\s*\nOAB/[A-Z]{2}\s*\[NÚMERO[^\]]*\]",
-            r"Atenciosamente,\s*\n\s*[^\n]*\nOAB/[A-Z]{2}[^\n]*",
-            r"OAB/[A-Z]{2}\s*\[NÚMERO[^\]]*\]\s*\nDr\.\s*\[NOME DO ADVOGADO\]",  # NOVO
-            r"Icó/CE,\s*\d+\s*de\s*\w+\s*de\s*\d+\s*\n\s*\n\s*OAB/[A-Z]{2}",  # NOVO
-        ]
-        
-        for padrao in padroes_remover:
-            template = re.sub(padrao, "", template, flags=re.MULTILINE | re.IGNORECASE)
-        
-        return template.strip()
-
     def _gerar_pedidos_completos(self, dados: DadosPrevidenciarios, pedidos_base: str) -> str:
         """Gera pedidos com DIB e justiça gratuita"""
-        
-        # REMOVER ASSINATURA DA IA PRIMEIRO
-        pedidos_base = self._remover_assinatura_ia(pedidos_base)
         
         # Adicionar DIB se disponível
         dib_pedido = ""
@@ -256,14 +205,11 @@ c) Que seja fixada a Data de Início do Benefício (DIB) em {dados.dib}, conform
             justica_gratuita = """
 d) Que seja deferido o benefício da justiça gratuita, nos termos da Lei 1.060/50 e art. 98 do CPC, tendo em vista a condição socioeconômica do requerente;"""
         
-        # Adicionar assinatura única
-        assinatura = self._gerar_assinatura_unica(dados)
-        
         return f"""{pedidos_base}{dib_pedido}{justica_gratuita}
 
 e) Que sejam juntados aos autos todos os documentos e informações constantes do processo administrativo;
 
-f) A condenação da parte requerida ao pagamento das custas processuais e honorários advocatícios, nos termos do art. 85 do CPC.{assinatura}"""
+f) A condenação da parte requerida ao pagamento das custas processuais e honorários advocatícios, nos termos do art. 85 do CPC."""
 
     def _preencher_template(self, template: str, dados: DadosPrevidenciarios) -> str:
         """
@@ -286,8 +232,7 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Extrair cidade e estado CORRIGIDO
         cidade, estado = self._extrair_cidade_estado_corrigido(
             getattr(dados, 'endereco_completo', ''),
-            getattr(dados, 'orgao_emissor', ''),
-            dados  # ← ADICIONAR ESTE PARÂMETRO
+            getattr(dados, 'orgao_emissor', '')
         )
         
         # Data formatada em português
@@ -300,26 +245,20 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         
         # Função auxiliar para verificar se o atributo existe
         def get_attr_safe(obj, attr, default=""):
-            try:
-                valor = getattr(obj, attr, default) if hasattr(obj, attr) else default
-                if valor is None:
-                    return str(default)
-                return str(valor)
-            except (ValueError, TypeError, AttributeError):
-                return str(default)
-
+            return getattr(obj, attr, default) if hasattr(obj, attr) else default
+        
         # CPF e RG formatados
-        cpf_formatado = self._formatar_cpf(get_attr_safe(dados, 'cpf', ''))
-        rg_numero = get_attr_safe(dados, 'rg', '') or "DOCUMENTO A INFORMAR"
-
+        cpf_formatado = self._formatar_cpf(get_attr_safe(dados, 'cpf'))
+        rg_numero = get_attr_safe(dados, 'rg') or "DOCUMENTO A INFORMAR"
+        
         # Valor da causa formatado
-        valor_causa_formatado = self._formatar_valor_monetario(get_attr_safe(dados, 'valor_causa', 0))
-
+        valor_causa_formatado = self._formatar_valor_monetario(get_attr_safe(dados, 'valor_causa'))
+        
         # Nome completo
-        nome_completo = get_attr_safe(dados, 'nome', '') or "NOME A INFORMAR"
-
+        nome_completo = get_attr_safe(dados, 'nome') or "NOME A INFORMAR"
+        
         # Endereço completo
-        endereco_completo = get_attr_safe(dados, 'endereco_completo', '') or "ENDEREÇO A INFORMAR"
+        endereco_completo = get_attr_safe(dados, 'endereco_completo') or "ENDEREÇO A INFORMAR"
         
         # Endereço do INSS (CORRIGIDO - AGÊNCIA REGIONAL)
         endereco_inss = f"com sede em Brasília/DF, representado pela Agência da Previdência Social de {cidade}/{estado}"
@@ -402,7 +341,6 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
             "[valor]": valor_causa_formatado,
             "R\$ [valor]": valor_causa_formatado,
             "(valor a ser calculado conforme a planilha anexa)": valor_causa_formatado,
-            "R\$ 85,000.00": "R\$ 85.000,00",  # Formato brasileiro
             
             # DATAS (CORRIGIDO)
             "[INSERIR LOCAL E DATA]": f"{cidade}/{estado}, {data_formatada}",
@@ -498,12 +436,9 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
             "Atenciosamente,\nDr. [NOME DO ADVOGADO]": f"Atenciosamente,\n\n{nome_advogado}",
             "Dr. [NOME DO ADVOGADO]\nOAB/CE [NÚMERO OAB]\nAtenciosamente,\n\nDr. [NOME DO ADVOGADO]": f"{nome_advogado}\n{oab_advogado}",
             "OAB/CE [NÚMERO OAB]\nAtenciosamente,\n\nDr. [NOME DO ADVOGADO]": f"{oab_advogado}",
-            # CORREÇÃO DUPLICAÇÕES FINAIS
+            # REMOVER DUPLICAÇÕES FINAIS
             f"{nome_advogado}\n{oab_advogado}\nAdvogado do Requerente\n\n{nome_advogado}": f"{nome_advogado}\n{oab_advogado}\nAdvogado do Requerente",
             f"{nome_advogado}\n{nome_advogado}": nome_advogado,
-            # NOVAS CORREÇÕES PARA ENDEREÇO DO ADVOGADO
-            "com endereço profissional na com sede em Brasília/DF": f"com escritório profissional à {endereco_completo}",
-            "endereço profissional na com sede em Brasília/DF": f"escritório profissional à {endereco_completo}",
         }
         
         # Aplicar substituições
@@ -563,8 +498,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -622,8 +557,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -681,8 +616,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -741,8 +676,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -782,7 +717,7 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         CÁLCULOS E VALORES TÉCNICOS:
         - Valor da causa: R\$ {valor_causa:,.2f}
         - Carência: {tempo_validado}
-        - DIB: Data do óbit como regra geral
+        - DIB: Data do óbito como regra geral
         
         JURISPRUDÊNCIA OBRIGATÓRIA A CITAR:
         - STJ sobre presunção de dependência econômica do cônjuge
@@ -799,8 +734,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -880,8 +815,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -941,8 +876,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -1001,8 +936,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -1060,8 +995,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
@@ -1120,9 +1055,8 @@ f) A condenação da parte requerida ao pagamento das custas processuais e honor
         # Preencher placeholders automaticamente
         peticao = self._preencher_template(peticao, dados)
         
-        # Aplicar pedidos completos com DIB e justiça gratuita
-        peticao = self._gerar_pedidos_completos(dados, peticao)
+        # Adicionar assinatura única
+        peticao += self._gerar_assinatura_unica(dados)
         
         peticao += f"\n\n{EthicsService.get_disclaimer()}"
         return peticao
-    
