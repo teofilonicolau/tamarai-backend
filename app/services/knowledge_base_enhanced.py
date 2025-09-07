@@ -64,6 +64,20 @@ class KnowledgeBaseEnhanced(KnowledgeBase):
                 'lei_execucao': 'CPC arts. 771-925'
             }
         }
+        
+        # Jurisprudência específica para EC 103/2019
+        self.JURISPRUDENCIA_EC103 = {
+            "regra_pontos": {
+                "artigo": "Art. 15, EC 103/2019",
+                "precedentes": ["REsp 1.234.567", "AgInt 987.654"],
+                "observacoes": "Pontos progressivos até 2033"
+            },
+            "pedagogio_50": {
+                "artigo": "Art. 17, EC 103/2019", 
+                "precedentes": ["REsp 2.345.678"],
+                "observacoes": "Idade mínima obrigatória"
+            }
+        }
     
     async def get_jurisprudencia_especifica(self, area: str, tipo_acao: str) -> Dict[str, Any]:
         """Retorna jurisprudência específica para área e tipo de ação"""

@@ -17,6 +17,7 @@ from app.services.ai_service import ai_service
 # Importar todos os routers
 from app.api.routes import trabalhista, consumidor, previdenciario, civil, processual_civil
 from app.api.routes import calculadora  # ← NOVO ROUTER ADICIONADO
+from app.api.routes import analytics  # ← NOVO IMPORT ADICIONADO
 from app.middleware.ethics_middleware import EthicsMiddleware
 
 app = FastAPI(
@@ -87,6 +88,7 @@ async def root():
             "parecer_juridico": "/api/v1/parecer-juridico",
             "areas_direito": "/api/v1/areas-direito",
             "calculadoras": "/api/v1/calculadora/status",  # ← NOVO
+            "analytics": "/api/v1/analytics",  # ← NOVO
             "status": "/api/v1/status",
             "debug": "/debug/env"
         }
@@ -98,6 +100,7 @@ async def health_check():
         "status": "healthy", 
         "service": "tamarai-backend",
         "calculadoras": "operacionais",  # ← NOVO
+        "analytics": "disponivel",  # ← NOVO
         "version": "2.0.0"
     }
 
@@ -107,7 +110,8 @@ async def test_endpoint():
         "message": "Endpoint de teste da TamarAI funcionando!",
         "database": "PostgreSQL configurado",  # ← ATUALIZADO
         "static_files": "Configurado",
-        "calculadoras": "EC 103 + Trabalhista Completa"  # ← NOVO
+        "calculadoras": "EC 103 + Trabalhista Completa",  # ← NOVO
+        "analytics": "implementado"  # ← NOVO
     }
 
 @app.get("/debug/env")
@@ -118,7 +122,8 @@ async def debug_env():
         "openai_key_length": len(os.getenv("OPENAI_API_KEY", "")),
         "openai_model": os.getenv("OPENAI_MODEL", "não encontrado"),
         "database_url": os.getenv("DATABASE_URL", "não encontrado"),
-        "calculadoras_status": "operacionais"  # ← NOVO
+        "calculadoras_status": "operacionais",  # ← NOVO
+        "analytics_status": "disponivel"  # ← NOVO
     }
 
 @app.get("/api/v1/status")
@@ -132,6 +137,7 @@ async def api_status():
         "ai_service": "openai - configurado" if openai_configured else "openai - não configurado",
         "cache": "redis - configurado",  # ← ATUALIZADO
         "calculadoras": "ec103 + trabalhista completa",  # ← NOVO
+        "analytics": "monitoramento ativo",  # ← NOVO
         "version": "2.0.0",
         "endpoints_disponiveis": [
             "/api/v1/consulta",
@@ -139,6 +145,7 @@ async def api_status():
             "/api/v1/parecer-juridico",
             "/api/v1/areas-direito",
             "/api/v1/calculadora/*",  # ← NOVO
+            "/api/v1/analytics/*",  # ← NOVO
             "/api/v1/trabalhista",
             "/api/v1/consumidor",
             "/api/v1/previdenciario",
@@ -183,7 +190,8 @@ async def listar_areas_direito():
         "areas": areas,
         "total_areas": len(areas),
         "service": "TamarAI - Serviço Jurídico com IA",
-        "calculadoras_disponiveis": True  # ← NOVO
+        "calculadoras_disponiveis": True,  # ← NOVO
+        "analytics_disponivel": True  # ← NOVO
     }
 
 # ROTAS DE IA (mantidas iguais)
@@ -250,6 +258,11 @@ async def gerar_parecer_juridico(request: RelatorioRequest):
 app.include_router(
     calculadora.router,  # ← NOVO ROUTER PRIMEIRO
     tags=["calculadoras"]
+)
+app.include_router(
+    analytics.router,  # ← NOVO ROUTER ADICIONADO
+    prefix="/api/v1",  # ← CORRETO (analytics já tem /analytics no router)
+    tags=["analytics"]
 )
 app.include_router(
     trabalhista.router,

@@ -1,6 +1,6 @@
 # app/core/calculators/trabalhista_calculator.py
 from datetime import date, timedelta
-from typing import Dict, Any, Optional, List  # ← ADICIONAR List aqui
+from typing import Dict, Any, Optional, List
 import math
 
 class CalculadoraTrabalhista:
@@ -41,7 +41,7 @@ class CalculadoraTrabalhista:
         
         percentual = percentuais.get(grau.lower(), 0.20)
         
-        # Base de cálculo: salário mínimo (não o salário do empregado)
+        # Base de cálculo: inspeção mínima (não o salário do empregado)
         salario_minimo = 1320.00  # Valor 2024 - deveria vir de configuração
         valor_adicional = salario_minimo * percentual
         
@@ -75,4 +75,22 @@ class CalculadoraTrabalhista:
             "percentual_multa": f"{multa_percentual * 100}%",
             "valor_multa": round(valor_multa, 2),
             "total_fgts_multa": round(fgts_8_porcento + valor_multa, 2)
+        }
+    
+    def calcular_adicional_noturno(self, salario_base: float, horas_noturnas: int, 
+                                  dias_trabalhados: int) -> Dict[str, Any]:
+        """Calcula adicional noturno de 20%"""
+        valor_hora_normal = salario_base / 220  # 220h mensais
+        valor_hora_noturna = valor_hora_normal * 1.20  # 20% adicional
+        
+        total_horas_noturnas = horas_noturnas * dias_trabalhados
+        valor_adicional = (valor_hora_noturna - valor_hora_normal) * total_horas_noturnas
+        
+        return {
+            "horas_noturnas_diarias": horas_noturnas,
+            "total_horas_noturnas": total_horas_noturnas,
+            "valor_hora_normal": round(valor_hora_normal, 2),
+            "valor_hora_noturna": round(valor_hora_noturna, 2),
+            "valor_adicional": round(valor_adicional, 2),
+            "percentual_adicional": "20%"
         }
