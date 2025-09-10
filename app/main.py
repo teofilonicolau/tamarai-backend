@@ -1,4 +1,4 @@
-# app/main.py - VERSÃO COMPLETA ATUALIZADA
+# app/main.py - VERSÃO CORRIGIDA
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -11,19 +11,19 @@ from dotenv import load_dotenv
 # Carregar variáveis do .env
 load_dotenv()
 
-# Importar o serviço de IA (sem imports circulares)
+# Importar o serviço de IA
 from app.services.ai_service import ai_service
 
-# Importar todos os routers
+# Importar routers - CORRIGIDO: calculadora (singular)
+from app.api.routes import calculadora, peticoes, consultas
 from app.api.routes import trabalhista, consumidor, previdenciario, civil, processual_civil
-from app.api.routes import calculadora  # ← NOVO ROUTER ADICIONADO
-from app.api.routes import analytics  # ← NOVO IMPORT ADICIONADO
+from app.api.routes import analytics
 from app.middleware.ethics_middleware import EthicsMiddleware
 
 app = FastAPI(
-    title="TamarAI - Inteligência Artificial Aplicada",
-    description="Soluções inteligentes para automação, análise de dados e integração de sistemas",
-    version="2.0.0",  # ← VERSÃO ATUALIZADA
+    title="TamarUSE API",
+    description="Soluções inteligentes para automação jurídica com IA",
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -31,21 +31,25 @@ app = FastAPI(
 # Adicionar middleware ético
 app.add_middleware(EthicsMiddleware)
 
-# CORS
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",  # React padrão
+        "http://localhost:5173",  # Vite
+        "http://127.0.0.1:5173",  # Vite alternativo
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Criar diretórios se não existirem
+# Criar diretórios estáticos
 os.makedirs("static", exist_ok=True)
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("static/pdfs", exist_ok=True)
 
-# Modelos Pydantic SIMPLIFICADOS
+# Modelos Pydantic
 class ConsultaRequest(BaseModel):
     pergunta: str
     area: str = "geral"
@@ -76,19 +80,19 @@ class RelatorioRequest(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "message": "Bem-vindo à API TamarAI!",
-        "version": "2.0.0",  # ← VERSÃO ATUALIZADA
+        "message": "Bem-vindo à API TamarUSE!",
+        "version": "2.0.0",
         "status": "Operacional",
         "purpose": "Inteligência Artificial aplicada com propósito",
         "docs": "/docs",
-        "novidades": "Calculadoras EC 103/2019 e Trabalhista Completa",  # ← NOVO
+        "novidades": "Calculadoras EC 103/2019 e Trabalhista Completa",
         "endpoints": {
             "consulta": "/api/v1/consulta",
-            "analise": "/api/v1/analise", 
+            "analise": "/api/v1/analise",
             "parecer_juridico": "/api/v1/parecer-juridico",
             "areas_direito": "/api/v1/areas-direito",
-            "calculadoras": "/api/v1/calculadora/status",  # ← NOVO
-            "analytics": "/api/v1/analytics",  # ← NOVO
+            "calculadoras": "/api/v1/calculadora/status",
+            "analytics": "/api/v1/analytics",
             "status": "/api/v1/status",
             "debug": "/debug/env"
         }
@@ -97,55 +101,52 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {
-        "status": "healthy", 
-        "service": "tamarai-backend",
-        "calculadoras": "operacionais",  # ← NOVO
-        "analytics": "disponivel",  # ← NOVO
+        "status": "healthy",
+        "service": "tamaruse-backend",
+        "calculadoras": "operacionais",
+        "analytics": "disponivel",
         "version": "2.0.0"
     }
 
 @app.get("/test")
 async def test_endpoint():
     return {
-        "message": "Endpoint de teste da TamarAI funcionando!",
-        "database": "PostgreSQL configurado",  # ← ATUALIZADO
+        "message": "Endpoint de teste da TamarUSE funcionando!",
+        "database": "PostgreSQL configurado",
         "static_files": "Configurado",
-        "calculadoras": "EC 103 + Trabalhista Completa",  # ← NOVO
-        "analytics": "implementado"  # ← NOVO
+        "calculadoras": "EC 103 + Trabalhista Completa",
+        "analytics": "implementado"
     }
 
 @app.get("/debug/env")
 async def debug_env():
-    """Debug - verificar variáveis de ambiente"""
     return {
         "openai_key_exists": bool(os.getenv("OPENAI_API_KEY")),
         "openai_key_length": len(os.getenv("OPENAI_API_KEY", "")),
         "openai_model": os.getenv("OPENAI_MODEL", "não encontrado"),
         "database_url": os.getenv("DATABASE_URL", "não encontrado"),
-        "calculadoras_status": "operacionais",  # ← NOVO
-        "analytics_status": "disponivel"  # ← NOVO
+        "calculadoras_status": "operacionais",
+        "analytics_status": "disponivel"
     }
 
 @app.get("/api/v1/status")
 async def api_status():
-    """Status da API e serviços"""
     openai_configured = bool(os.getenv("OPENAI_API_KEY"))
-    
     return {
         "api": "online",
-        "database": "postgresql - conectado",  # ← ATUALIZADO
+        "database": "postgresql - conectado",
         "ai_service": "openai - configurado" if openai_configured else "openai - não configurado",
-        "cache": "redis - configurado",  # ← ATUALIZADO
-        "calculadoras": "ec103 + trabalhista completa",  # ← NOVO
-        "analytics": "monitoramento ativo",  # ← NOVO
+        "cache": "redis - configurado",
+        "calculadoras": "ec103 + trabalhista completa",
+        "analytics": "monitoramento ativo",
         "version": "2.0.0",
         "endpoints_disponiveis": [
             "/api/v1/consulta",
             "/api/v1/analise",
             "/api/v1/parecer-juridico",
             "/api/v1/areas-direito",
-            "/api/v1/calculadora/*",  # ← NOVO
-            "/api/v1/analytics/*",  # ← NOVO
+            "/api/v1/calculadora/*",
+            "/api/v1/analytics/*",
             "/api/v1/trabalhista",
             "/api/v1/consumidor",
             "/api/v1/previdenciario",
@@ -156,19 +157,18 @@ async def api_status():
 
 @app.get("/api/v1/areas-direito")
 async def listar_areas_direito():
-    """Listar todas as áreas do direito disponíveis"""
     areas = {
         "previdenciario": {
             "nome": "Direito Previdenciário",
             "descricao": "Benefícios do INSS, aposentadorias, auxílios",
             "tipos_peticao": ["inicial", "revisao", "recurso"],
-            "calculadoras": ["tempo-especial", "regra-transicao-ec103", "periodo-graca"]  # ← NOVO
+            "calculadoras": ["tempo-especial", "regra-transicao-ec103", "periodo-graca"]
         },
         "trabalhista": {
-            "nome": "Direito Trabalhista", 
+            "nome": "Direito Trabalhista",
             "descricao": "Relações de trabalho, rescisões, direitos trabalhistas",
             "tipos_peticao": ["inicial", "contestacao", "recurso"],
-            "calculadoras": ["horas-extras", "verbas-rescisorias"]  # ← NOVO
+            "calculadoras": ["horas-extras", "verbas-rescisorias"]
         },
         "consumidor": {
             "nome": "Direito do Consumidor",
@@ -189,24 +189,22 @@ async def listar_areas_direito():
     return {
         "areas": areas,
         "total_areas": len(areas),
-        "service": "TamarAI - Serviço Jurídico com IA",
-        "calculadoras_disponiveis": True,  # ← NOVO
-        "analytics_disponivel": True  # ← NOVO
+        "service": "TamarUSE - Serviço Jurídico com IA",
+        "calculadoras_disponiveis": True,
+        "analytics_disponivel": True
     }
 
-# ROTAS DE IA (mantidas iguais)
+# Rotas de IA
 @app.post("/api/v1/consulta")
 async def fazer_consulta(request: ConsultaRequest):
-    """Consulta jurídica com IA real"""
     resultado = await ai_service.fazer_consulta_juridica(
-        request.pergunta, 
+        request.pergunta,
         request.area,
         firm_name=request.firm_name,
         lawyer_name=request.lawyer_name,
         signature_text=request.signature_text,
         ai_persona=request.ai_persona
     )
-    
     return {
         "pergunta": request.pergunta,
         "area": request.area,
@@ -216,16 +214,14 @@ async def fazer_consulta(request: ConsultaRequest):
 
 @app.post("/api/v1/analise")
 async def analisar_texto(request: AnaliseRequest):
-    """Análise de documento com IA real"""
     resultado = await ai_service.analisar_documento(
-        request.texto, 
+        request.texto,
         request.tipo_analise,
         firm_name=request.firm_name,
         lawyer_name=request.lawyer_name,
         signature_text=request.signature_text,
         ai_persona=request.ai_persona
     )
-    
     return {
         "texto_original": request.texto[:100] + "..." if len(request.texto) > 100 else request.texto,
         "escritorio": request.firm_name or "Serviço Jurídico AI",
@@ -234,10 +230,9 @@ async def analisar_texto(request: AnaliseRequest):
 
 @app.post("/api/v1/parecer-juridico")
 async def gerar_parecer_juridico(request: RelatorioRequest):
-    """Gerar parecer jurídico estruturado"""
     resultado = await ai_service.gerar_relatorio_juridico(
-        request.titulo, 
-        request.conteudo, 
+        request.titulo,
+        request.conteudo,
         request.area,
         request.incluir_jurisprudencia,
         firm_name=request.firm_name,
@@ -245,7 +240,6 @@ async def gerar_parecer_juridico(request: RelatorioRequest):
         signature_text=request.signature_text,
         ai_persona=request.ai_persona
     )
-    
     return {
         "titulo": request.titulo,
         "area": request.area,
@@ -254,41 +248,16 @@ async def gerar_parecer_juridico(request: RelatorioRequest):
         **resultado
     }
 
-# Incluir todos os routers
-app.include_router(
-    calculadora.router,  # ← NOVO ROUTER PRIMEIRO
-    tags=["calculadoras"]
-)
-app.include_router(
-    analytics.router,  # ← NOVO ROUTER ADICIONADO
-    prefix="/api/v1",  # ← CORRETO (analytics já tem /analytics no router)
-    tags=["analytics"]
-)
-app.include_router(
-    trabalhista.router,
-    prefix="/api/v1/trabalhista",
-    tags=["trabalhista"]
-)
-app.include_router(
-    consumidor.router,
-    prefix="/api/v1/consumidor",
-    tags=["consumidor"]
-)
-app.include_router(
-    previdenciario.router,
-    prefix="/api/v1/previdenciario",
-    tags=["previdenciario"]
-)
-app.include_router(
-    civil.router,
-    prefix="/api/v1/civil",
-    tags=["civil"]
-)
-app.include_router(
-    processual_civil.router,
-    prefix="/api/v1/processual-civil",
-    tags=["processual-civil"]
-)
+# Incluir routers - CORRIGIDO
+app.include_router(calculadora.router, prefix="/api/v1", tags=["calculadoras"])
+app.include_router(peticoes.router, prefix="/api/v1", tags=["peticoes"])
+app.include_router(consultas.router, prefix="/api/v1", tags=["consultas"])
+app.include_router(analytics.router, prefix="/api/v1", tags=["analytics"])
+app.include_router(trabalhista.router, prefix="/api/v1/trabalhista", tags=["trabalhista"])
+app.include_router(consumidor.router, prefix="/api/v1/consumidor", tags=["consumidor"])
+app.include_router(previdenciario.router, prefix="/api/v1/previdenciario", tags=["previdenciario"])
+app.include_router(civil.router, prefix="/api/v1/civil", tags=["civil"])
+app.include_router(processual_civil.router, prefix="/api/v1/processual-civil", tags=["processual-civil"])
 
 # Servir arquivos estáticos
 try:

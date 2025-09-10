@@ -1,5 +1,3 @@
-# .gitignore (ATUALIZADO)
-
 # Python
 __pycache__/
 *.py[cod]
@@ -27,11 +25,14 @@ venv/
 env/
 ENV/
 
-# Environment Variables
+# Environment files
 .env
+.env.local
+.env.production
 
 # Database
 *.db
+*.sqlite
 *.sqlite3
 
 # IDE
@@ -52,10 +53,12 @@ Thumbs.db
 .pytest_cache/
 
 # Uploads
+uploads/
 uploads/*
 !uploads/.gitkeep
 
 # Static files (generated)
+static/pdfs/
 static/pdfs/*
 !static/pdfs/.gitkeep
 
