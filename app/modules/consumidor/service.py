@@ -1,4 +1,4 @@
-# app/modules/consumidor/service.py - NOVO
+# app/modules/consumidor/service.py - CORRIGIDO
 from typing import List
 from .schemas import DadosConsumidor
 from app.services.ai_service import ai_service
@@ -8,6 +8,8 @@ class ConsumidorService:
     
     async def gerar_peticao_vicio_produto(self, dados: DadosConsumidor) -> str:
         """Gera petição para vício do produto"""
+        valor_formatado = f"R\$ {dados.valor_prejuizo or 0}"
+        
         prompt = f"""
         Como especialista em Direito do Consumidor, elabore uma petição inicial para vício do produto
         com base no CDC (Lei 8.078/90) e os seguintes dados:
@@ -16,7 +18,7 @@ class ConsumidorService:
         - Empresa: {dados.empresa_ré}
         - Problema: {dados.descricao_problema}
         - Data: {dados.data_ocorrencia}
-        - Valor: R\$ {dados.valor_prejuizo or 0}
+        - Valor: {valor_formatado}
         
         ESTRUTURA OBRIGATÓRIA:
         1. QUALIFICAÇÃO DAS PARTES
@@ -32,7 +34,8 @@ class ConsumidorService:
         peticao = resultado.get("peticao", "Erro ao gerar petição")
         
         # Adicionar disclaimer ético
-        peticao += f"\n\n{EthicsService.get_disclaimer()}"
+        disclaimer = EthicsService.get_disclaimer()
+        peticao += f"\n\n{disclaimer}"
         
         return peticao
     
@@ -41,6 +44,14 @@ class ConsumidorService:
         
         # Verificar se houve pagamento efetivo
         pagamento_efetuado = "pago" in dados.descricao_problema.lower() or dados.valor_prejuizo > 0
+        valor_formatado = f"R\$ {dados.valor_prejuizo or 0}"
+        
+        # Criar texto condicional fora da f-string
+        texto_pagamento = ""
+        if pagamento_efetuado:
+            texto_pagamento = f"Se houve pagamento, mencionar: 'Tendo o Autor efetuado o pagamento das cobranças indevidas no valor de {valor_formatado}...'"
+        else:
+            texto_pagamento = "Se não houve pagamento, focar na cobrança vexatória e danos morais."
         
         prompt = f"""
         Como especialista em Direito do Consumidor, elabore uma petição inicial para cobrança indevida
@@ -49,7 +60,7 @@ class ConsumidorService:
         DADOS DO CASO:
         - Empresa: {dados.empresa_ré}
         - Descrição: {dados.descricao_problema}
-        - Valor cobrado indevidamente: R\$ {dados.valor_prejuizo or 0}
+        - Valor cobrado indevidamente: {valor_formatado}
         - Pagamento efetuado: {"Sim" if pagamento_efetuado else "Apenas cobrança"}
         
         FUNDAMENTOS:
@@ -58,11 +69,12 @@ class ConsumidorService:
         - Jurisprudência STJ sobre repetição de indébito
         
         IMPORTANTE: 
-        {"Se houve pagamento, mencionar: 'Tendo o Autor efetuado o pagamento das cobranças indevidas no valor de R\$ " + str(dados.valor_prejuizo or 0) + "...'" if pagamento_efetuado else "Se não houve pagamento, focar na cobrança vexatória e danos morais."}
+        {texto_pagamento}
         """
         
         resultado = await ai_service.gerar_peticao_especializada(prompt, "consumidor")
         peticao = resultado.get("peticao", "Erro ao gerar petição")
-        peticao += f"\n\n{EthicsService.get_disclaimer()}"
+        disclaimer = EthicsService.get_disclaimer()
+        peticao += f"\n\n{disclaimer}"
         
         return peticao
