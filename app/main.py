@@ -14,7 +14,7 @@ load_dotenv()
 # Importar o serviço de IA
 from app.services.ai_service import ai_service
 
-# Importar routers - CORRIGIDO: calculadora (singular)
+# Importar routers
 from app.api.routes import calculadora, peticoes, consultas
 from app.api.routes import trabalhista, consumidor, previdenciario, civil, processual_civil
 from app.api.routes import analytics
@@ -35,12 +35,14 @@ app.add_middleware(EthicsMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # React padrão
-        "http://localhost:5173",  # Vite
-        "http://127.0.0.1:5173",  # Vite alternativo
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://tamarai-frontend-92ho41oeq.vercel.app",
+        "https://*.vercel.app",
+        "https://tamarai-frontend.vercel.app"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -248,7 +250,7 @@ async def gerar_parecer_juridico(request: RelatorioRequest):
         **resultado
     }
 
-# Incluir routers - CORRIGIDO
+# Incluir routers
 app.include_router(calculadora.router, prefix="/api/v1", tags=["calculadoras"])
 app.include_router(peticoes.router, prefix="/api/v1", tags=["peticoes"])
 app.include_router(consultas.router, prefix="/api/v1", tags=["consultas"])
