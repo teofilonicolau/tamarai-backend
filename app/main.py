@@ -1,4 +1,5 @@
 # app/main.py - VERSÃO CORRIGIDA
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -31,18 +32,20 @@ app = FastAPI(
 # Adicionar middleware ético
 app.add_middleware(EthicsMiddleware)
 
-# Configurar CORS
+# Configurar CORS para ambiente local + produção
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://localhost",
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://tamarai-frontend.vercel.app",
         "https://tamarai-frontend-92ho41oeq.vercel.app",
         "https://*.vercel.app",
-        "https://tamarai-frontend.vercel.app"
+        "https://tamarai-backend-production.up.railway.app"
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
